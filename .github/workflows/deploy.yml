@@ -5,14 +5,10 @@ on:
     branches:
       - main
       - develop
-    paths:
-      - 'mule-apps/tlf-everton-exp/**'
   pull_request:
     branches:
       - main
       - develop
-    paths:
-      - 'mule-apps/tlf-everton-exp/**'
   workflow_dispatch:
     inputs:
       environment:
@@ -31,7 +27,7 @@ on:
 
 env:
   APP_NAME: tlf-everton-exp
-  APP_ROOT: mule-apps/tlf-everton-exp
+  APP_ROOT: .
   MULE_RUNTIME: 4.9-java17
   ANYPOINT_URI: https://anypoint.mulesoft.com
   BUSINESS_GROUP_ID: 5834a905-793c-4621-9565-b8bc11830a87
