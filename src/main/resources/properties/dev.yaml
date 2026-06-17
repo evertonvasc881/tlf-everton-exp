@@ -1,0 +1,28 @@
+JSONLogger:
+  application:
+    name: ${app.name}
+    version: "v1"
+
+cloudhub:
+  worker: "1"
+  workerType: "MICRO"
+  region: "sa-east-1"
+
+listener:
+  port: "8091"
+  timeout: "30000"
+
+request:
+  server:
+    port: "443"
+    tlf-sales-sys:
+      host: "fenix-lb-dev.telefonica.com.br"
+  endpoint:
+    tlf-sales-sys:
+      basePath: "/com/sys"
+      getOrderFlight:
+        method: "GET"
+        path: "/com/v1/getOrderFlight-s"
+        wait: "3000"
+        retry: "0"
+        timeout: "30000"

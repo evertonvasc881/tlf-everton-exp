@@ -1,0 +1,13 @@
+# tlf-everton-exp — DEV environment properties
+http:
+  port: 8081
+
+tlf:
+  sales:
+    sys:
+      host: "tlf-sales-sys-dev.cloudhub.io"
+      port: 443
+      basepath: "/com/v1"
+      protocol: "HTTPS"
+      connectionTimeout: 10000
+      responseTimeout: 30000

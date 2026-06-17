@@ -1,0 +1,257 @@
+#%RAML 1.0
+# =================================================================
+# TLF-EVERTON-EXP — Experience API
+# Projeto: SCRUM-9 / getOrderFlight-e
+# Camada: Experience (API-led Connectivity)
+# Consumidor: VE (frontend)
+# Downstream: TLF-SALES-SYS (COM/SALESFORCE)
+# Data Mapping: scrum9_DM_MULE01_OrderFlight-e.xlsx
+# Gerado por: ms-raml agent — 2026-06-16
+# =================================================================
+
+title: TLF-EVERTON-EXP
+description: |
+  Experience API responsável por expor a consulta de ordens de voo (getOrderFlight)
+  para o sistema consumidor VE (frontend Vivo Empresas).
+
+  Esta API atua como camada de experiência na arquitetura API-led da TLF,
+  fazendo interface com o backend TLF-SALES-SYS (COM/SALESFORCE) para
+  recuperar ordens de voo associadas a um CNPJ.
+
+  Decisão arquitetural: camada de processo suprimida (passthrough puro 1-to-1).
+  Ref: ms-architect — SCRUM-9 — 2026-06-16.
+
+  IMPORTANTE — Parâmetro "endereco":
+  O Data Mapping define "endereco" como objeto complexo. Para conformidade REST,
+  este objeto é serializado como query params individuais com prefixo "endereco."
+  (dot-notation): endereco.logradouro, endereco.numero, endereco.complemento,
+  endereco.bairro, endereco.municipio, endereco.uf, endereco.cep.
+
+version: v1
+baseUri: "https://{environment}.api.tlf.com.br/tlf-everton-exp/{version}"
+baseUriParameters:
+  environment:
+    type: string
+    description: Ambiente de deploy da API.
+    enum: [dev, qa, uat, prod]
+    example: dev
+
+protocols:
+  - HTTPS
+
+mediaType:
+  - application/json
+
+uses:
+  traits: traits/common-traits.raml
+
+types:
+  OrderFlightQueryParams: !include dataTypes/OrderFlightQueryParams.raml
+  OrderFlightResponse: !include dataTypes/OrderFlightResponse.raml
+  OrderItem: !include dataTypes/OrderItem.raml
+  ErrorResponse: !include dataTypes/ErrorResponse.raml
+
+# =================================================================
+# Security Schemes — Client ID Enforcement
+# =================================================================
+securitySchemes:
+  clientIdEnforcement:
+    type: Pass Through
+    displayName: Client ID Enforcement
+    description: |
+      Política de segurança baseada em Client ID e Client Secret aplicada
+      via Anypoint API Manager (Client ID Enforcement policy).
+      O Client ID deve ser fornecido no header Authorization ou como
+      query param client_id, conforme configuração da policy no API Manager.
+    describedBy:
+      headers:
+        Authorization:
+          type: string
+          required: true
+          description: |
+            Token de autenticação Bearer ou Client ID do aplicativo consumidor.
+            Formato esperado pelo API Manager: Bearer <token> ou client_id direto
+            conforme configuração da policy no Anypoint Platform.
+          example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      responses:
+        401:
+          description: Credenciais ausentes ou inválidas.
+        403:
+          description: Client ID sem permissão de acesso ao recurso.
+
+securedBy:
+  - clientIdEnforcement
+
+# =================================================================
+# Recursos
+# =================================================================
+
+# -----------------------------------------------------------------
+# Endpoint base definido pelo Data Mapping SCRUM-9:
+#   /com/order/v1/getOrderFlight-e (com verbo no nome — conforme DM)
+# URI param: cnpj (string — CNPJ do cliente)
+# -----------------------------------------------------------------
+/com:
+  /order:
+    /v1:
+      /getOrderFlight-e:
+        description: |
+          Recurso de consulta de ordens de voo da Experience API.
+          Endpoint definido pelo Data Mapping SCRUM-9.
+          O segmento "getOrderFlight-e" mantém o verbo no nome conforme
+          especificação do DM (exceção documentada à naming convention REST).
+
+        /{cnpj}:
+          description: |
+            Consulta ordens de voo associadas ao CNPJ informado.
+            O CNPJ é o identificador principal do cliente no sistema TLF-SALES-SYS.
+          uriParameters:
+            cnpj:
+              type: string
+              required: true
+              description: |
+                CNPJ do cliente (pessoa jurídica) para consulta de ordens de voo.
+                Deve conter exatamente 14 dígitos numéricos, sem pontuação (sem '.', '/' ou '-').
+                Exemplo válido: "12345678000195".
+              pattern: "^[0-9]{14}$"
+              minLength: 14
+              maxLength: 14
+              example: "12345678000195"
+
+          get:
+            displayName: Consultar Ordens de Voo por CNPJ
+            description: |
+              Recupera a lista de ordens de voo associadas ao CNPJ informado,
+              com opção de filtragem por nome de oferta, número de contrato,
+              endereço e limite de registros.
+
+              O sistema retorna flag de bloqueio do CNPJ e a lista de ordens
+              com tipo, número, status e data de criação.
+
+              Downstream: TLF-SALES-SYS — GET /com/v1/getOrderFlight-s.
+
+            is:
+              - traits.correlatable
+              - traits.errorable
+              - traits.rateLimited
+
+            headers:
+              Authorization:
+                type: string
+                required: true
+                description: |
+                  Token Bearer de autenticação. Obrigatório conforme Data Mapping SCRUM-9.
+                  Propagado pelo gateway ao sistema downstream TLF-SALES-SYS.
+                example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              X-Vivo-Transaction-Id:
+                type: string
+                required: false
+                description: |
+                  Identificador de transação de negócio Vivo. Opcional na entrada.
+                  Propagado downstream para rastreabilidade fim-a-fim.
+                  Se ausente, o gateway gera UUID internamente.
+                example: "txn-20260616-00123"
+
+            queryParameters:
+              nomeOferta:
+                type: string
+                required: false
+                description: |
+                  Filtro por nome da oferta comercial contratada pelo CNPJ.
+                example: "FIBRA-EMPRESARIAL-500M"
+              numeroContrato:
+                type: string
+                required: false
+                description: |
+                  Filtro por número do contrato associado ao CNPJ.
+                example: "CTR-2026-0098765"
+              Limit:
+                type: integer
+                required: false
+                description: |
+                  Número máximo de ordens a retornar (paginação simples).
+                  Mínimo: 1. Máximo: 100. Default: 10.
+                minimum: 1
+                maximum: 100
+                default: 10
+                example: 10
+              endereco.logradouro:
+                type: string
+                required: false
+                description: |
+                  Filtro por logradouro do endereço.
+                  Componente do objeto "endereco" do DM, serializado em dot-notation para conformidade REST.
+                example: "Avenida Paulista"
+              endereco.numero:
+                type: string
+                required: false
+                description: Filtro por número do imóvel no logradouro.
+                example: "1000"
+              endereco.complemento:
+                type: string
+                required: false
+                description: Filtro por complemento do endereço (apartamento, sala, etc.).
+                example: "Sala 301"
+              endereco.bairro:
+                type: string
+                required: false
+                description: Filtro por bairro do endereço.
+                example: "Bela Vista"
+              endereco.municipio:
+                type: string
+                required: false
+                description: Filtro por município (cidade) do endereço.
+                example: "São Paulo"
+              endereco.uf:
+                type: string
+                required: false
+                description: Filtro por UF (estado) — sigla 2 caracteres maiúsculos.
+                minLength: 2
+                maxLength: 2
+                pattern: "^[A-Z]{2}$"
+                example: "SP"
+              endereco.cep:
+                type: string
+                required: false
+                description: Filtro por CEP — 8 dígitos numéricos sem hífen.
+                pattern: "^[0-9]{8}$"
+                example: "01310100"
+
+            responses:
+              200:
+                description: |
+                  Consulta realizada com sucesso.
+                  Retorna flag de bloqueio do CNPJ e lista de ordens de voo.
+                  O array "ordem" pode ser vazio se não houver ordens para os filtros aplicados.
+                headers:
+                  Content-Type:
+                    type: string
+                    example: "application/json"
+                  X-Vivo-Transaction-Id:
+                    type: string
+                    description: Correlation ID propagado (gerado internamente se não informado na requisição).
+                    example: "txn-20260616-00123"
+                body:
+                  application/json:
+                    type: OrderFlightResponse
+                    examples:
+                      HappyPath:
+                        displayName: Happy Path — CNPJ ativo com ordens
+                        description: Retorno padrão com CNPJ sem bloqueio e múltiplas ordens.
+                        value:
+                          flagBloqueio: false
+                          ordem:
+                            - tipoOrdem: "INSTALACAO"
+                              numeroOrdem: "ORD-2026-00001234"
+                              statusOrdem: "EM_ANDAMENTO"
+                              dataCriacao: "2026-06-16T10:30:00Z"
+                            - tipoOrdem: "MANUTENCAO"
+                              numeroOrdem: "ORD-2026-00005678"
+                              statusOrdem: "CONCLUIDA"
+                              dataCriacao: "2026-06-10T14:22:00Z"
+                      BloqueadoSemOrdens:
+                        displayName: CNPJ Bloqueado sem Ordens
+                        description: CNPJ com bloqueio ativo e sem ordens disponíveis.
+                        value:
+                          flagBloqueio: true
+                          ordem: []

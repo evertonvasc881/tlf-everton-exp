@@ -1,0 +1,77 @@
+#%RAML 1.0 DataType
+# ---------------------------------------------------------------
+# ErrorResponse — RFC 7807 Problem Details
+# Compartilhado por todas as respostas de erro da TLF-EVERTON-EXP
+# ---------------------------------------------------------------
+
+displayName: ErrorResponse
+description: |
+  Estrutura padronizada de erro conforme RFC 7807 (Problem Details for HTTP APIs).
+  Usada em todos os status de erro (4xx, 5xx) da API TLF-EVERTON-EXP.
+
+type: object
+properties:
+  type:
+    type: string
+    required: true
+    description: |
+      URI de referência que identifica o tipo do problema.
+      Deve ser uma URI absoluta resolvível com documentação do erro.
+    example: "https://api.tlf.com.br/errors/validation-error"
+  title:
+    type: string
+    required: true
+    description: Resumo curto e legível do tipo do problema. Não deve variar entre ocorrências do mesmo problema.
+    example: "Parâmetro de requisição inválido"
+  status:
+    type: integer
+    required: true
+    description: Código de status HTTP correspondente ao problema.
+    example: 400
+  detail:
+    type: string
+    required: true
+    description: Explicação detalhada e legível, específica para esta ocorrência do problema.
+    example: "O campo 'cnpj' deve conter exatamente 14 dígitos numéricos."
+  instance:
+    type: string
+    required: false
+    description: |
+      URI que identifica a ocorrência específica do problema.
+      Pode referenciar um log interno ou ID de rastreamento.
+    example: "urn:uuid:a18c7a22-4b34-4f12-bd5e-9ac3e7041234"
+  correlationId:
+    type: string
+    required: false
+    description: Identificador de correlação propagado do header X-Vivo-Transaction-Id para rastreabilidade fim-a-fim.
+    example: "txn-20260616-00123"
+
+examples:
+  BadRequest:
+    type: "https://api.tlf.com.br/errors/validation-error"
+    title: "Parâmetro de requisição inválido"
+    status: 400
+    detail: "O campo 'cnpj' deve conter exatamente 14 dígitos numéricos."
+    instance: "urn:uuid:a18c7a22-4b34-4f12-bd5e-9ac3e7041234"
+    correlationId: "txn-20260616-00123"
+  Unauthorized:
+    type: "https://api.tlf.com.br/errors/unauthorized"
+    title: "Credenciais inválidas ou ausentes"
+    status: 401
+    detail: "O header Authorization está ausente ou contém um token inválido."
+    instance: "urn:uuid:b29d8b33-5c45-5023-ce6f-abd4f8152345"
+    correlationId: "txn-20260616-00124"
+  NotFound:
+    type: "https://api.tlf.com.br/errors/not-found"
+    title: "Recurso não encontrado"
+    status: 404
+    detail: "Nenhuma ordem de voo encontrada para o CNPJ informado."
+    instance: "urn:uuid:c3ae9c44-6d56-6134-df70-bce5091623456"
+    correlationId: "txn-20260616-00125"
+  InternalServerError:
+    type: "https://api.tlf.com.br/errors/internal-server-error"
+    title: "Erro interno do servidor"
+    status: 500
+    detail: "Falha inesperada ao processar a requisição. Por favor, tente novamente ou contate o suporte."
+    instance: "urn:uuid:d4bf0d55-7e67-7245-eg81-cdf6102734567"
+    correlationId: "txn-20260616-00126"

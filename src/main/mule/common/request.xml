@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+    xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+    xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd">
+    <flow name="request-global-sys" doc:id="2ff9ebfa-23e0-44e6-a020-16ceac48831f">
+        <json-logger:logger doc:name="Start" doc:id="26abbf8e-fe4b-4dd9-84f5-d0778012581f" config-ref="JSON_Logger_Config" message="Send" tracePoint="BEFORE_REQUEST">
+            <json-logger:content><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+    payload: JSONLoggerModule::stringifyNonJSON(payload)
+}]]]></json-logger:content>
+        </json-logger:logger>
+        <http:request method="#[vars.dataSend.Method]" doc:name="Global_sys_request" doc:id="cc949c77-09c5-47ac-9087-fdded5aa9f97" path="#[vars.dataSend.Path]" responseTimeout="#[vars.dataSend.Timeout]" config-ref="Global_HTTP_Request_configuration">
+            <http:headers><![CDATA[#[vars.dataSend.header]]]></http:headers>
+            <http:uri-params><![CDATA[#[vars.dataSend.uriParams]]]></http:uri-params>
+            <http:query-params><![CDATA[#[vars.dataSend.queryParams]]]></http:query-params>
+        </http:request>
+        <json-logger:logger doc:name="End" doc:id="818d4375-4315-449c-90cb-e204077c4996" config-ref="JSON_Logger_Config" message="End" tracePoint="AFTER_REQUEST"/>
+        <error-handler ref="error-handler-global-flow" />
+    </flow>
+</mule>

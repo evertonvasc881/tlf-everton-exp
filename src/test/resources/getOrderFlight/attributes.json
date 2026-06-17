@@ -1,0 +1,33 @@
+{
+  "method": "GET",
+  "requestPath": "/com/order/v1/getOrderFlight-e/12345678000195",
+  "requestUri": "/com/order/v1/getOrderFlight-e/12345678000195?nomeOferta=FIBRA-500M",
+  "headers": {
+    "Authorization": "Bearer test-token-123",
+    "X-Vivo-Transaction-Id": "txn-test-001",
+    "x-vivo-transaction-id": "txn-test-001",
+    "correlationid": "corr-test-001",
+    "content-type": "application/json",
+    "accept": "*/*",
+    "host": "localhost:8091"
+  },
+  "clientCertificate": null,
+  "scheme": "http",
+  "queryParams": {
+    "nomeOferta": "FIBRA-500M",
+    "Limit": "10"
+  },
+  "queryString": "nomeOferta=FIBRA-500M&Limit=10",
+  "version": "HTTP/1.1",
+  "maskedRequestPath": "/com/order/v1/getOrderFlight-e/12345678000195",
+  "listenerPath": "/*",
+  "relativePath": "/com/order/v1/getOrderFlight-e/12345678000195",
+  "localAddress": "/127.0.0.1:8091",
+  "uriParams": {
+    "cnpj": "12345678000195"
+  },
+  "rawRequestUri": "/com/order/v1/getOrderFlight-e/12345678000195?nomeOferta=FIBRA-500M&Limit=10",
+  "rawRequestPath": "/com/order/v1/getOrderFlight-e/12345678000195",
+  "remoteAddress": "/127.0.0.1:49907",
+  "requestPath": "/com/order/v1/getOrderFlight-e/12345678000195"
+}

@@ -1,0 +1,33 @@
+{
+  "method": "GET",
+  "requestPath": "/com/order/v1/getOrderFlight-e/98765432000111",
+  "requestUri": "/com/order/v1/getOrderFlight-e/98765432000111?nomeOferta=FIBRA-100M",
+  "headers": {
+    "Authorization": "Bearer test-token-bloqueado",
+    "X-Vivo-Transaction-Id": "txn-test-bloqueado-002",
+    "x-vivo-transaction-id": "txn-test-bloqueado-002",
+    "correlationid": "corr-test-002",
+    "content-type": "application/json",
+    "accept": "*/*",
+    "host": "localhost:8091"
+  },
+  "clientCertificate": null,
+  "scheme": "http",
+  "queryParams": {
+    "nomeOferta": "FIBRA-100M",
+    "Limit": "10"
+  },
+  "queryString": "nomeOferta=FIBRA-100M&Limit=10",
+  "version": "HTTP/1.1",
+  "maskedRequestPath": "/com/order/v1/getOrderFlight-e/98765432000111",
+  "listenerPath": "/*",
+  "relativePath": "/com/order/v1/getOrderFlight-e/98765432000111",
+  "localAddress": "/127.0.0.1:8091",
+  "uriParams": {
+    "cnpj": "98765432000111"
+  },
+  "rawRequestUri": "/com/order/v1/getOrderFlight-e/98765432000111?nomeOferta=FIBRA-100M&Limit=10",
+  "rawRequestPath": "/com/order/v1/getOrderFlight-e/98765432000111",
+  "remoteAddress": "/127.0.0.1:49908",
+  "requestPath": "/com/order/v1/getOrderFlight-e/98765432000111"
+}

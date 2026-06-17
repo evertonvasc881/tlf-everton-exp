@@ -1,0 +1,50 @@
+#%RAML 1.0 DataType
+# ---------------------------------------------------------------
+# OrderFlightResponse — Body de resposta do GET getOrderFlight-e
+# Fonte: SCRUM-9 / scrum9_DM_MULE01_OrderFlight-e.xlsx
+# ---------------------------------------------------------------
+
+displayName: OrderFlightResponse
+description: |
+  Corpo de resposta da consulta de ordens de voo (GET /com/order/v1/getOrderFlight-e/{cnpj}).
+  Retorna flag de bloqueio e lista de ordens associadas ao CNPJ informado.
+
+type: object
+properties:
+  flagBloqueio:
+    type: boolean
+    required: true
+    description: |
+      Indica se o CNPJ informado possui bloqueio ativo no sistema TLF-SALES-SYS.
+      true = CNPJ bloqueado (ordens podem estar suspensas).
+      false = CNPJ sem bloqueio (situação normal).
+    example: false
+  ordem:
+    type: array
+    required: true
+    items: !include OrderItem.raml
+    description: |
+      Lista de ordens de voo associadas ao CNPJ.
+      Pode ser um array vazio se não houver ordens para o CNPJ / filtros aplicados.
+      Cada item representa uma ordem com tipo, número, status e data de criação.
+    example:
+      - tipoOrdem: "INSTALACAO"
+        numeroOrdem: "ORD-2026-00001234"
+        statusOrdem: "EM_ANDAMENTO"
+        dataCriacao: "2026-06-16T10:30:00Z"
+
+examples:
+  HappyPath:
+    flagBloqueio: false
+    ordem:
+      - tipoOrdem: "INSTALACAO"
+        numeroOrdem: "ORD-2026-00001234"
+        statusOrdem: "EM_ANDAMENTO"
+        dataCriacao: "2026-06-16T10:30:00Z"
+      - tipoOrdem: "MANUTENCAO"
+        numeroOrdem: "ORD-2026-00005678"
+        statusOrdem: "CONCLUIDA"
+        dataCriacao: "2026-06-10T14:22:00Z"
+  BloqueadoSemOrdens:
+    flagBloqueio: true
+    ordem: []

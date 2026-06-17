@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:tracing="http://www.mulesoft.org/schema/mule/tracing"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/json-logger http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd
+http://www.mulesoft.org/schema/mule/tracing http://www.mulesoft.org/schema/mule/tracing/current/mule-tracing.xsd">
+
+    <http:listener-config name="HTTP_Listener_tlf_everton_exp_config" doc:name="HTTP Listener config" doc:id="a1b2c3d4-e5f6-7890-abcd-ef1234567890">
+        <http:listener-connection host="0.0.0.0" port="${secure::listener.port}" readTimeout="${secure::listener.timeout}" />
+    </http:listener-config>
+
+    <apikit:config name="tlf-everton-exp-config" api="resource::5834a905-793c-4621-9565-b8bc11830a87:tlf-everton-exp:1.0.0:raml:zip:tlf-everton-exp.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+
+    <flow name="tlf-everton-exp-main" doc:id="b2c3d4e5-f6a7-8901-bcde-f12345678901">
+        <http:listener config-ref="HTTP_Listener_tlf_everton_exp_config" path="/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <ee:transform doc:name="Set Attributes, Payload and Timestamp" doc:id="c3d4e5f6-a7b8-9012-cdef-123456789012">
+            <ee:message />
+            <ee:variables>
+                <ee:set-variable variableName="attributes"><![CDATA[%dw 2.0
+output application/json
+---
+attributes]]></ee:set-variable>
+                <ee:set-variable variableName="payload"><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+                <ee:set-variable variableName="timeStamp"><![CDATA[%dw 2.0
+output application/json
+---
+now()]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <apikit:router config-ref="tlf-everton-exp-config" />
+        <error-handler ref="error-handler-global-flow" />
+    </flow>
+
+
+    <flow name="get:\healthz:tlf-everton-exp-config" doc:id="e5f6a7b8-c9d0-1234-efab-345678901234">
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  msg: "API is healthy."
+} as Object {encoding: "UTF-8", mediaType: "application/json"}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+
+    <flow name="get:\com\order\v1\getOrderFlight-e\(cnpj):tlf-everton-exp-config" doc:id="f6a7b8c9-d0e1-2345-fabc-456789012345">
+        <json-logger:logger doc:name="Start" doc:id="a7b8c9d0-e1f2-3456-abcd-567890123456" config-ref="JSON_Logger_Config" message='#["Start_" ++ vars.attributes.method ++ "_getOrderFlight-e"]'>
+            <json-logger:content><![CDATA[#[import modules::JSONLoggerModule
+output application/json
+
+---
+
+{
+  // LGPD: requestPath suprimido — contém CNPJ (dado sensível PJ). Usar operação+método para rastreabilidade.
+  Endpoint: "/com/order/v1/getOrderFlight-e/{cnpj}",
+
+  Transactionid: vars.attributes.headers."x-vivo-transaction-id",
+
+  CorrelationID: vars.attributes.headers.correlationid,
+
+  Method: vars.attributes.method,
+
+  Request_payload: JSONLoggerModule::stringifyNonJSON(vars.payload)
+}]]]></json-logger:content>
+        </json-logger:logger>
+        <set-variable value="#[%dw 2.0&#10;output application/java&#10;---&#10;{&#10; Protocol: &quot;HTTPS&quot;,&#10; Method: Mule::p(&quot;secure::request.endpoint.tlf-sales-sys.getOrderFlight.method&quot;),&#10; Host: Mule::p(&quot;secure::request.server.tlf-sales-sys.host&quot;),&#10; Port: Mule::p(&quot;secure::request.server.port&quot;),&#10; BasePath: Mule::p(&quot;secure::request.endpoint.tlf-sales-sys.basePath&quot;),&#10; Path: Mule::p(&quot;secure::request.endpoint.tlf-sales-sys.basePath&quot;) ++ Mule::p(&quot;secure::request.endpoint.tlf-sales-sys.getOrderFlight.path&quot;),&#10; Timeout: Mule::p(&quot;secure::request.endpoint.tlf-sales-sys.getOrderFlight.timeout&quot;),&#10; Endpoint: &quot;https://&quot; ++ Mule::p(&quot;secure::request.server.tlf-sales-sys.host&quot;) ++ Mule::p(&quot;secure::request.endpoint.tlf-sales-sys.basePath&quot;) ++ Mule::p(&quot;secure::request.endpoint.tlf-sales-sys.getOrderFlight.path&quot;),&#10; Producer: &quot;TLF-SALES-SYS&quot;,&#10; Consumer: &quot;TLF-EVERTON-EXP&quot;,&#10; header: {&#10;  Authorization: (attributes.headers.Authorization default &quot;&quot; as String),&#10;  client_secret: Mule::p('runtime.properties.request.sys.client.secret'),&#10;  client_id: Mule::p('runtime.properties.request.sys.client.id'),&#10;  TransactionID: (attributes.headers.&quot;X-Vivo-Transaction-Id&quot; default &quot;&quot; as String),&#10;  CorrelationID: (attributes.headers.CorrelationID default &quot;&quot; as String),&#10;  Application: (attributes.headers.Application default &quot;&quot; as String),&#10;  'Content-Type': (attributes.headers.'Content-Type' default &quot;&quot; as String)&#10; },&#10; queryParams: attributes.queryParams,&#10; uriParams: attributes.uriParams&#10;}]" doc:name="dataSend" doc:id="b8c9d0e1-f2a3-4567-bcde-678901234567" variableName="dataSend" />
+        <flow-ref doc:name="request-global" doc:id="c9d0e1f2-a3b4-5678-cdef-789012345678" name="request-global-sys" />
+        <set-variable value="#[attributes.statusCode]" doc:name="httpStatus" doc:id="d0e1f2a3-b4c5-6789-defa-890123456789" variableName="httpStatus" />
+        <json-logger:logger doc:name="End" doc:id="e1f2a3b4-c5d6-7890-efab-901234567890" config-ref="JSON_Logger_Config" message='#["End_" ++ vars.attributes.method ++ "_getOrderFlight-e"]' tracePoint="END">
+            <json-logger:content><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+
+{
+  // LGPD: requestPath suprimido — contém CNPJ (dado sensível PJ). Usar operação+método para rastreabilidade.
+  Endpoint: "/com/order/v1/getOrderFlight-e/{cnpj}",
+
+  Transactionid: vars.attributes.headers."x-vivo-transaction-id",
+
+  CorrelationID: vars.attributes.headers.correlationid,
+
+  HttpStatus: (vars.httpStatus default ""),
+
+  Response_payload: JSONLoggerModule::stringifyNonJSON(payload)
+}]]]></json-logger:content>
+        </json-logger:logger>
+    </flow>
+
+</mule>

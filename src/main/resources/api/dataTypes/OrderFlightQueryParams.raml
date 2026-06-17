@@ -1,0 +1,90 @@
+#%RAML 1.0 DataType
+# ---------------------------------------------------------------
+# OrderFlightQueryParams — Query Parameters do GET getOrderFlight-e
+# Fonte: SCRUM-9 / scrum9_DM_MULE01_OrderFlight-e.xlsx
+#
+# DECISÃO DE DESIGN — Objeto "endereco" como query params flat:
+#   O DM define "endereco" como objeto complexo. Para conformidade REST
+#   (RFC 3986 / OpenAPI / RAML 1.0), objetos não são natively suportados
+#   como query params. A abordagem adotada é serialização flat com prefixo
+#   "endereco." (dot-notation), ex: endereco.logradouro, endereco.cep.
+#   Isso garante compatibilidade com proxies, gateways e clientes HTTP
+#   sem necessidade de encoding especial. Alternativa (JSON no body)
+#   foi descartada pois viola a semântica REST de um GET de consulta.
+# ---------------------------------------------------------------
+
+displayName: OrderFlightQueryParams
+description: |
+  Query parameters aceitos pelo endpoint GET /com/order/v1/getOrderFlight-e/{cnpj}.
+  O objeto "endereco" do Data Mapping é serializado como query params individuais
+  com prefixo "endereco." (dot-notation) para conformidade REST.
+
+type: object
+properties:
+  nomeOferta:
+    type: string
+    required: false
+    description: |
+      Nome da oferta comercial para filtrar as ordens de voo.
+      Permite filtrar resultados por oferta específica contratada pelo CNPJ.
+    example: "FIBRA-EMPRESARIAL-500M"
+  numeroContrato:
+    type: string
+    required: false
+    description: |
+      Número do contrato para filtrar ordens associadas a um contrato específico.
+    example: "CTR-2026-0098765"
+  Limit:
+    type: integer
+    required: false
+    description: |
+      Número máximo de ordens a retornar (paginação).
+      Deve ser um inteiro positivo. Se não informado, o sistema aplica o limite padrão do backend.
+    minimum: 1
+    maximum: 100
+    example: 10
+  endereco.logradouro:
+    type: string
+    required: false
+    description: |
+      Logradouro do endereço para filtro geográfico de ordens.
+      Componente do objeto "endereco" do Data Mapping, serializado em dot-notation.
+    example: "Avenida Paulista"
+  endereco.numero:
+    type: string
+    required: false
+    description: |
+      Número do imóvel no logradouro para filtro geográfico.
+      Tipado como string para suportar complementos como "S/N".
+    example: "1000"
+  endereco.complemento:
+    type: string
+    required: false
+    description: Complemento do endereço (apartamento, sala, andar, etc.).
+    example: "Sala 301"
+  endereco.bairro:
+    type: string
+    required: false
+    description: Bairro do endereço para filtro geográfico de ordens.
+    example: "Bela Vista"
+  endereco.municipio:
+    type: string
+    required: false
+    description: Município (cidade) do endereço para filtro geográfico.
+    example: "São Paulo"
+  endereco.uf:
+    type: string
+    required: false
+    description: |
+      Unidade Federativa (estado) do endereço. Deve ser a sigla com 2 caracteres maiúsculos.
+    minLength: 2
+    maxLength: 2
+    pattern: "^[A-Z]{2}$"
+    example: "SP"
+  endereco.cep:
+    type: string
+    required: false
+    description: |
+      CEP do endereço no formato 8 dígitos numéricos (sem hífen).
+    pattern: "^[0-9]{8}$"
+    example: "01310100"

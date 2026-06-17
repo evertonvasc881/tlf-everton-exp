@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:munit="http://www.mulesoft.org/schema/mule/munit"
+      xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+   http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+   http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+   http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+
+    <munit:config name="get-com-order-v1-getOrderFlight-e-cnpj.xml"/>
+
+    <!--
+        TEST 1 — Happy Path: CNPJ ativo com ordens em andamento
+        Cenário: CNPJ 12345678000195, nomeOferta=FIBRA-500M, Limit=10
+        Backend retorna 200 com flagBloqueio=false e 2 ordens
+        Expectativa: payload com flagBloqueio=false e array ordem não vazio
+    -->
+    <munit:test description="Test - Happy Path - getOrderFlight CNPJ ativo com ordens" doc:id="1a2b3c4d-5e6f-7890-abcd-ef1234567890" name="com-order-v1-getOrderFlight-success">
+        <munit:behavior>
+            <munit:set-event doc:id="2b3c4d5e-6f7a-8901-bcde-f12345678901" doc:name="Set Event - CNPJ ativo">
+                <munit:payload value="#[null]" mediaType="application/json" />
+                <munit:attributes value="#[output application/json --- readUrl('classpath://getOrderFlight/attributes.json')]" encoding="UTF-8" mediaType="application/json" />
+                <munit:variables>
+                    <munit:variable key="attributes" value="#[output application/json --- readUrl('classpath://getOrderFlight/attributes.json')]" encoding="UTF-8" mediaType="application/json" />
+                    <munit:variable key="payload" value="#[null]" encoding="UTF-8" mediaType="application/json" />
+                </munit:variables>
+            </munit:set-event>
+            <!-- Mock do http:request no request-global-sys (doc:id fixo cc949c77-...) -->
+            <munit-tools:mock-when doc:id="3c4d5e6f-7a8b-9012-cdef-123456789012" doc:name="Mock http:request - 200 OK" processor="http:request">
+                <munit-tools:with-attributes>
+                    <munit-tools:with-attribute whereValue="Global_sys_request" attributeName="doc:name" />
+                    <munit-tools:with-attribute whereValue="cc949c77-09c5-47ac-9087-fdded5aa9f97" attributeName="doc:id" />
+                </munit-tools:with-attributes>
+                <munit-tools:then-return>
+                    <munit-tools:payload value="#[output application/json --- readUrl('classpath://getOrderFlight/response.dwl')]" mediaType="application/json" encoding="UTF-8" />
+                    <munit-tools:attributes value="#[{ statusCode: 200 }]" mediaType="application/java" />
+                </munit-tools:then-return>
+            </munit-tools:mock-when>
+        </munit:behavior>
+        <munit:execution>
+            <flow-ref doc:id="4d5e6f7a-8b9c-0123-defa-234567890123" doc:name="Flow-ref to getOrderFlight-e" name="get:\com\order\v1\getOrderFlight-e\(cnpj):tlf-everton-exp-config"/>
+        </munit:execution>
+        <munit:validation>
+            <!-- Valida que flagBloqueio é false -->
+            <munit-tools:assert-that doc:id="5e6f7a8b-9c0d-1234-efab-345678901234" doc:name="Assert flagBloqueio = false"
+                expression="#[output application/java --- payload.flagBloqueio]"
+                is="#[MunitTools::equalTo(false)]" />
+            <!-- Valida que o array de ordens não está vazio -->
+            <munit-tools:assert-that doc:id="5e6f7a8c-9c0d-1234-efab-345678901235" doc:name="Assert ordem não vazia"
+                expression="#[output application/java --- sizeOf(payload.ordem)]"
+                is="#[MunitTools::greaterThan(0)]" />
+            <!-- Valida estrutura do primeiro item de ordem -->
+            <munit-tools:assert-that doc:id="5e6f7a8d-9c0d-1234-efab-345678901236" doc:name="Assert tipoOrdem presente"
+                expression="#[output application/java --- payload.ordem[0].tipoOrdem]"
+                is="#[MunitTools::notNullValue()]" />
+            <munit-tools:assert-that doc:id="5e6f7a8e-9c0d-1234-efab-345678901237" doc:name="Assert numeroOrdem presente"
+                expression="#[output application/java --- payload.ordem[0].numeroOrdem]"
+                is="#[MunitTools::notNullValue()]" />
+            <munit-tools:assert-that doc:id="5e6f7a8f-9c0d-1234-efab-345678901238" doc:name="Assert statusOrdem presente"
+                expression="#[output application/java --- payload.ordem[0].statusOrdem]"
+                is="#[MunitTools::notNullValue()]" />
+            <munit-tools:assert-that doc:id="5e6f7a90-9c0d-1234-efab-345678901239" doc:name="Assert dataCriacao presente"
+                expression="#[output application/java --- payload.ordem[0].dataCriacao]"
+                is="#[MunitTools::notNullValue()]" />
+        </munit:validation>
+    </munit:test>
+
+    <!--
+        TEST 2 — CNPJ Bloqueado: flagBloqueio=true, ordem=[]
+        Cenário: CNPJ 98765432000111 com bloqueio ativo
+        Backend retorna 200 com flagBloqueio=true e array vazio
+        Expectativa: payload com flagBloqueio=true e ordem vazia
+    -->
+    <munit:test description="Test - CNPJ Bloqueado - flagBloqueio true, ordem vazia" doc:id="aa1b3c4d-5e6f-7890-abcd-ef1234567891" name="com-order-v1-getOrderFlight-cnpj-bloqueado">
+        <munit:behavior>
+            <munit:set-event doc:id="ab3c4d5e-6f7a-8901-bcde-f12345678902" doc:name="Set Event - CNPJ bloqueado">
+                <munit:payload value="#[null]" mediaType="application/json" />
+                <munit:attributes value="#[output application/json --- readUrl('classpath://getOrderFlight/attributes-bloqueado.json')]" encoding="UTF-8" mediaType="application/json" />
+                <munit:variables>
+                    <munit:variable key="attributes" value="#[output application/json --- readUrl('classpath://getOrderFlight/attributes-bloqueado.json')]" encoding="UTF-8" mediaType="application/json" />
+                    <munit:variable key="payload" value="#[null]" encoding="UTF-8" mediaType="application/json" />
+                </munit:variables>
+            </munit:set-event>
+            <munit-tools:mock-when doc:id="ac4d5e6f-7a8b-9012-cdef-123456789013" doc:name="Mock http:request - 200 bloqueado" processor="http:request">
+                <munit-tools:with-attributes>
+                    <munit-tools:with-attribute whereValue="Global_sys_request" attributeName="doc:name" />
+                    <munit-tools:with-attribute whereValue="cc949c77-09c5-47ac-9087-fdded5aa9f97" attributeName="doc:id" />
+                </munit-tools:with-attributes>
+                <munit-tools:then-return>
+                    <munit-tools:payload value="#[output application/json --- readUrl('classpath://getOrderFlight/response-bloqueado.dwl')]" mediaType="application/json" encoding="UTF-8" />
+                    <munit-tools:attributes value="#[{ statusCode: 200 }]" mediaType="application/java" />
+                </munit-tools:then-return>
+            </munit-tools:mock-when>
+        </munit:behavior>
+        <munit:execution>
+            <flow-ref doc:id="ad5e6f7a-8b9c-0123-defa-234567890124" doc:name="Flow-ref to getOrderFlight-e - bloqueado" name="get:\com\order\v1\getOrderFlight-e\(cnpj):tlf-everton-exp-config"/>
+        </munit:execution>
+        <munit:validation>
+            <!-- Valida que flagBloqueio é true -->
+            <munit-tools:assert-that doc:id="ae6f7a8b-9c0d-1234-efab-345678901240" doc:name="Assert flagBloqueio = true"
+                expression="#[output application/java --- payload.flagBloqueio]"
+                is="#[MunitTools::equalTo(true)]" />
+            <!-- Valida que o array de ordens está vazio -->
+            <munit-tools:assert-that doc:id="ae6f7a8c-9c0d-1234-efab-345678901241" doc:name="Assert ordem vazia"
+                expression="#[output application/java --- sizeOf(payload.ordem)]"
+                is="#[MunitTools::equalTo(0)]" />
+        </munit:validation>
+    </munit:test>
+
+    <!--
+        TEST 3 — Erro de Conectividade: downstream inacessível
+        Cenário: HTTP:CONNECTIVITY — TLF-SALES-SYS indisponível
+        Expectativa: flow propaga o erro (expectedErrorType=HTTP:CONNECTIVITY)
+        Nota: o error-handler-global-flow captura e retorna 502/503
+    -->
+    <munit:test name="com-order-v1-getOrderFlight-connectivity-error" doc:id="6f7a8b9c-0d1e-2345-fabc-456789012345" description="Test - Downstream inacessivel - HTTP:CONNECTIVITY" expectedErrorType="HTTP:CONNECTIVITY">
+        <munit:behavior>
+            <munit:set-event doc:name="Set Event - connectivity error" doc:id="7a8b9c0d-1e2f-3456-abcd-567890123456">
+                <munit:payload value="#[null]" mediaType="application/json" />
+                <munit:attributes value="#[output application/json --- readUrl('classpath://getOrderFlight/attributes.json')]" encoding="UTF-8" mediaType="application/json" />
+                <munit:variables>
+                    <munit:variable key="attributes" value="#[output application/json --- readUrl('classpath://getOrderFlight/attributes.json')]" encoding="UTF-8" mediaType="application/json" />
+                    <munit:variable key="payload" value="#[null]" encoding="UTF-8" mediaType="application/json" />
+                </munit:variables>
+            </munit:set-event>
+            <!-- Mock retorna erro de conectividade HTTP -->
+            <munit-tools:mock-when doc:name="Mock http:request - HTTP:CONNECTIVITY" doc:id="8b9c0d1e-2f3a-4567-bcde-678901234567" processor="http:request">
+                <munit-tools:with-attributes>
+                    <munit-tools:with-attribute whereValue="Global_sys_request" attributeName="doc:name" />
+                    <munit-tools:with-attribute whereValue="cc949c77-09c5-47ac-9087-fdded5aa9f97" attributeName="doc:id" />
+                </munit-tools:with-attributes>
+                <munit-tools:then-return>
+                    <munit-tools:error typeId="HTTP:CONNECTIVITY" />
+                </munit-tools:then-return>
+            </munit-tools:mock-when>
+        </munit:behavior>
+        <munit:execution>
+            <flow-ref doc:name="Flow-ref to getOrderFlight-e - connectivity error" doc:id="9c0d1e2f-3a4b-5678-cdef-789012345678" name="get:\com\order\v1\getOrderFlight-e\(cnpj):tlf-everton-exp-config" />
+        </munit:execution>
+        <!-- expectedErrorType=HTTP:CONNECTIVITY dispensa assert — o teste passa se e somente se o erro for lançado -->
+    </munit:test>
+
+    <!--
+        TEST 4 — Backend retorna 404: CNPJ não encontrado no sistema downstream
+        Cenário: TLF-SALES-SYS retorna HTTP 404 (CNPJ sem registros)
+        Expectativa: httpStatus=404 propagado, payload contém response do downstream
+    -->
+    <munit:test description="Test - Backend 404 - CNPJ nao encontrado no downstream" doc:id="ba1b3c4d-5e6f-7890-abcd-ef1234567892" name="com-order-v1-getOrderFlight-backend-404">
+        <munit:behavior>
+            <munit:set-event doc:id="bb3c4d5e-6f7a-8901-bcde-f12345678903" doc:name="Set Event - backend 404">
+                <munit:payload value="#[null]" mediaType="application/json" />
+                <munit:attributes value="#[output application/json --- readUrl('classpath://getOrderFlight/attributes.json')]" encoding="UTF-8" mediaType="application/json" />
+                <munit:variables>
+                    <munit:variable key="attributes" value="#[output application/json --- readUrl('classpath://getOrderFlight/attributes.json')]" encoding="UTF-8" mediaType="application/json" />
+                    <munit:variable key="payload" value="#[null]" encoding="UTF-8" mediaType="application/json" />
+                </munit:variables>
+            </munit:set-event>
+            <!-- Mock retorna 404 do backend (não é erro de conectividade, é HTTP 404 válido) -->
+            <munit-tools:mock-when doc:id="bc4d5e6f-7a8b-9012-cdef-123456789014" doc:name="Mock http:request - 404 Not Found" processor="http:request">
+                <munit-tools:with-attributes>
+                    <munit-tools:with-attribute whereValue="Global_sys_request" attributeName="doc:name" />
+                    <munit-tools:with-attribute whereValue="cc949c77-09c5-47ac-9087-fdded5aa9f97" attributeName="doc:id" />
+                </munit-tools:with-attributes>
+                <munit-tools:then-return>
+                    <munit-tools:payload value='#[output application/json --- { "type": "https://tlf.com.br/errors/not-found", "title": "Resource Not Found", "status": 404, "detail": "CNPJ 12345678000195 nao encontrado no sistema downstream.", "instance": "/com/order/v1/getOrderFlight-e/12345678000195" }]' mediaType="application/json" encoding="UTF-8" />
+                    <munit-tools:attributes value="#[{ statusCode: 404 }]" mediaType="application/java" />
+                </munit-tools:then-return>
+            </munit-tools:mock-when>
+        </munit:behavior>
+        <munit:execution>
+            <flow-ref doc:id="bd5e6f7a-8b9c-0123-defa-234567890125" doc:name="Flow-ref to getOrderFlight-e - 404" name="get:\com\order\v1\getOrderFlight-e\(cnpj):tlf-everton-exp-config"/>
+        </munit:execution>
+        <munit:validation>
+            <!-- Valida que o httpStatus foi setado como 404 (set-variable no flow após o request) -->
+            <munit-tools:assert-that doc:id="be6f7a8b-9c0d-1234-efab-345678901242" doc:name="Assert httpStatus = 404"
+                expression="#[output application/java --- vars.httpStatus]"
+                is="#[MunitTools::equalTo(404)]" />
+        </munit:validation>
+    </munit:test>
+
+    <!--
+        TEST 5 — Health Check: GET /healthz retorna 200 com { msg: "API is healthy." }
+        Cenário: health check endpoint sem dependência de sistema downstream
+        Expectativa: payload.msg = "API is healthy."
+    -->
+    <munit:test description="Test - Healthz - API is healthy" doc:id="ca1b3c4d-5e6f-7890-abcd-ef1234567893" name="healthz-returns-healthy">
+        <munit:behavior>
+            <munit:set-event doc:id="cb3c4d5e-6f7a-8901-bcde-f12345678904" doc:name="Set Event - healthz">
+                <munit:payload value="#[null]" mediaType="application/json" />
+            </munit:set-event>
+        </munit:behavior>
+        <munit:execution>
+            <flow-ref doc:id="cc4d5e6f-7a8b-9012-cdef-123456789015" doc:name="Flow-ref to healthz" name="get:\healthz:tlf-everton-exp-config"/>
+        </munit:execution>
+        <munit:validation>
+            <munit-tools:assert-that doc:id="cd5e6f7a-8b9c-0123-defa-234567890126" doc:name="Assert msg = API is healthy."
+                expression="#[output application/java --- payload.msg]"
+                is="#[MunitTools::equalTo('API is healthy.')]" />
+        </munit:validation>
+    </munit:test>
+
+</mule>

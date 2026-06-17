@@ -1,0 +1,206 @@
+#%RAML 1.0 Library
+# ---------------------------------------------------------------
+# common-traits — Biblioteca de Traits Reutilizáveis
+# TLF-EVERTON-EXP Experience API
+# ---------------------------------------------------------------
+
+usage: |
+  Importar esta library no RAML principal com "uses: traits: traits/common-traits.raml".
+  Aplicar as traits nos recursos e métodos via "is: [traits.correlatable, traits.errorable]".
+
+traits:
+  # ---------------------------------------------------------------
+  # correlatable — Propagação do Correlation ID de negócio (X-Vivo-Transaction-Id)
+  # ---------------------------------------------------------------
+  correlatable:
+    usage: |
+      Aplique em todo método que deve propagar o correlationId de negócio Vivo.
+      O header X-Vivo-Transaction-Id é opcional na entrada mas deve ser
+      gerado/propagado internamente se ausente.
+    headers:
+      X-Vivo-Transaction-Id:
+        type: string
+        required: false
+        description: |
+          Identificador de transação de negócio Vivo para rastreabilidade fim-a-fim.
+          Se não informado, o gateway gera um UUID internamente e propaga downstream.
+          Deve ser incluído nos logs para correlação de chamadas entre sistemas.
+        example: "txn-20260616-00123"
+
+  # ---------------------------------------------------------------
+  # errorable — Respostas de erro padronizadas RFC 7807
+  # ---------------------------------------------------------------
+  errorable:
+    usage: |
+      Aplique em todo método para declarar as respostas de erro padronizadas.
+      Garante que todos os endpoints retornem Problem Details (RFC 7807).
+    responses:
+      400:
+        description: |
+          Bad Request — Parâmetros de requisição inválidos ou ausentes.
+          Ex: cnpj com formato incorreto, Limit fora do intervalo válido.
+        headers:
+          Content-Type:
+            type: string
+            example: "application/problem+json"
+        body:
+          application/problem+json:
+            type: !include ../dataTypes/ErrorResponse.raml
+            example:
+              type: "https://api.tlf.com.br/errors/validation-error"
+              title: "Parâmetro de requisição inválido"
+              status: 400
+              detail: "O campo 'cnpj' deve conter exatamente 14 dígitos numéricos."
+              instance: "urn:uuid:a18c7a22-4b34-4f12-bd5e-9ac3e7041234"
+              correlationId: "txn-20260616-00123"
+      401:
+        description: |
+          Unauthorized — Header Authorization ausente ou token inválido/expirado.
+        headers:
+          Content-Type:
+            type: string
+            example: "application/problem+json"
+          WWW-Authenticate:
+            type: string
+            example: "Bearer realm=\"tlf-everton-exp\""
+        body:
+          application/problem+json:
+            type: !include ../dataTypes/ErrorResponse.raml
+            example:
+              type: "https://api.tlf.com.br/errors/unauthorized"
+              title: "Credenciais inválidas ou ausentes"
+              status: 401
+              detail: "O header Authorization está ausente ou contém um token inválido."
+              instance: "urn:uuid:b29d8b33-5c45-5023-ce6f-abd4f8152345"
+              correlationId: "txn-20260616-00124"
+      403:
+        description: |
+          Forbidden — Client ID não tem permissão para acessar este recurso.
+        body:
+          application/problem+json:
+            type: !include ../dataTypes/ErrorResponse.raml
+            example:
+              type: "https://api.tlf.com.br/errors/forbidden"
+              title: "Acesso proibido"
+              status: 403
+              detail: "O cliente não tem permissão para acessar o recurso solicitado."
+              instance: "urn:uuid:c3ae9c44-6d56-6134-df70-bce5091623456"
+              correlationId: "txn-20260616-00125"
+      404:
+        description: |
+          Not Found — Nenhuma ordem de voo encontrada para o CNPJ e filtros informados.
+        body:
+          application/problem+json:
+            type: !include ../dataTypes/ErrorResponse.raml
+            example:
+              type: "https://api.tlf.com.br/errors/not-found"
+              title: "Recurso não encontrado"
+              status: 404
+              detail: "Nenhuma ordem de voo encontrada para o CNPJ informado."
+              instance: "urn:uuid:d4bf0d55-7e67-7245-eg81-cdf6102734567"
+              correlationId: "txn-20260616-00126"
+      429:
+        description: |
+          Too Many Requests — Rate limit excedido. Aguarde antes de tentar novamente.
+        headers:
+          Retry-After:
+            type: integer
+            description: Segundos para aguardar antes de nova tentativa.
+            example: 30
+        body:
+          application/problem+json:
+            type: !include ../dataTypes/ErrorResponse.raml
+            example:
+              type: "https://api.tlf.com.br/errors/rate-limit-exceeded"
+              title: "Limite de requisições excedido"
+              status: 429
+              detail: "Número máximo de requisições por minuto atingido. Aguarde 30 segundos."
+              instance: "urn:uuid:e5c01e66-8f78-8356-fh92-deg7213845678"
+              correlationId: "txn-20260616-00127"
+      500:
+        description: |
+          Internal Server Error — Falha inesperada no processamento da requisição.
+        body:
+          application/problem+json:
+            type: !include ../dataTypes/ErrorResponse.raml
+            example:
+              type: "https://api.tlf.com.br/errors/internal-server-error"
+              title: "Erro interno do servidor"
+              status: 500
+              detail: "Falha inesperada ao processar a requisição. Contate o suporte."
+              instance: "urn:uuid:f6d12f77-9089-9467-gi03-efh8324956789"
+              correlationId: "txn-20260616-00128"
+      502:
+        description: |
+          Bad Gateway — Falha na comunicação com o sistema downstream TLF-SALES-SYS.
+        body:
+          application/problem+json:
+            type: !include ../dataTypes/ErrorResponse.raml
+            example:
+              type: "https://api.tlf.com.br/errors/bad-gateway"
+              title: "Falha no gateway"
+              status: 502
+              detail: "O sistema downstream TLF-SALES-SYS retornou uma resposta inválida."
+              instance: "urn:uuid:g7e23g88-0190-0578-hj14-fgi9435067890"
+              correlationId: "txn-20260616-00129"
+      503:
+        description: |
+          Service Unavailable — Sistema temporariamente indisponível. Tente novamente.
+        headers:
+          Retry-After:
+            type: integer
+            description: Segundos estimados para restabelecimento do serviço.
+            example: 60
+        body:
+          application/problem+json:
+            type: !include ../dataTypes/ErrorResponse.raml
+            example:
+              type: "https://api.tlf.com.br/errors/service-unavailable"
+              title: "Serviço indisponível"
+              status: 503
+              detail: "O serviço está temporariamente indisponível. Tente novamente em 60 segundos."
+              instance: "urn:uuid:h8f34h99-1201-1689-ik25-ghj0546178901"
+              correlationId: "txn-20260616-00130"
+
+  # ---------------------------------------------------------------
+  # pageable — Suporte a paginação via query param Limit
+  # ---------------------------------------------------------------
+  pageable:
+    usage: |
+      Aplique em métodos GET que suportam paginação via query param Limit.
+      O DM de SCRUM-9 define "Limit" (integer) como query param de paginação.
+    queryParameters:
+      Limit:
+        type: integer
+        required: false
+        description: |
+          Número máximo de registros a retornar por página.
+          Se não informado, o sistema aplica o limite padrão definido no backend.
+        minimum: 1
+        maximum: 100
+        default: 10
+        example: 10
+
+  # ---------------------------------------------------------------
+  # rateLimited — Documentação de rate limiting
+  # ---------------------------------------------------------------
+  rateLimited:
+    usage: |
+      Aplique em endpoints sujeitos a rate limiting por Client ID.
+      Documenta os headers de rate limit retornados pelo API Manager.
+    headers:
+      X-RateLimit-Limit:
+        type: integer
+        required: false
+        description: Número máximo de requisições permitidas no janela de tempo.
+        example: 100
+      X-RateLimit-Remaining:
+        type: integer
+        required: false
+        description: Número de requisições restantes na janela corrente.
+        example: 95
+      X-RateLimit-Reset:
+        type: integer
+        required: false
+        description: Timestamp Unix (segundos) de quando a janela de rate limit é reiniciada.
+        example: 1750082400

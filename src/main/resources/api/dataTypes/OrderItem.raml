@@ -1,0 +1,55 @@
+#%RAML 1.0 DataType
+# ---------------------------------------------------------------
+# OrderItem — Item de Ordem de Voo
+# Reutilizável como elemento do array "ordem" na OrderFlightResponse
+# Fonte: SCRUM-9 / scrum9_DM_MULE01_OrderFlight-e.xlsx
+# ---------------------------------------------------------------
+
+displayName: OrderItem
+description: |
+  Representa um item de ordem de voo retornado pela TLF-EVERTON-EXP.
+  Cada entrada do array "ordem" na response é do tipo OrderItem.
+
+type: object
+properties:
+  tipoOrdem:
+    type: string
+    required: true
+    description: |
+      Tipo da ordem de voo. Identifica a categoria/natureza da ordem
+      (ex: INSTALACAO, MANUTENCAO, REMOCAO, MUDANCA).
+    example: "INSTALACAO"
+  numeroOrdem:
+    type: string
+    required: true
+    description: |
+      Número único identificador da ordem de voo no sistema TLF-SALES-SYS (COM/SALESFORCE).
+      Deve ser tratado como opaque string — não assumir formato fixo.
+    example: "ORD-2026-00001234"
+  statusOrdem:
+    type: string
+    required: true
+    description: |
+      Status atual da ordem de voo.
+      Valores esperados: ABERTA, EM_ANDAMENTO, CONCLUIDA, CANCELADA.
+      O contrato não restringe enum para permitir evolução do sistema downstream sem breaking change.
+    example: "EM_ANDAMENTO"
+  dataCriacao:
+    type: string
+    required: true
+    description: |
+      Data e hora de criação da ordem no sistema de origem.
+      Formato ISO 8601: YYYY-MM-DDTHH:mm:ssZ.
+    example: "2026-06-16T10:30:00Z"
+
+examples:
+  InstalacaoAberta:
+    tipoOrdem: "INSTALACAO"
+    numeroOrdem: "ORD-2026-00001234"
+    statusOrdem: "ABERTA"
+    dataCriacao: "2026-06-16T08:00:00Z"
+  ManutencaoConcluida:
+    tipoOrdem: "MANUTENCAO"
+    numeroOrdem: "ORD-2026-00005678"
+    statusOrdem: "CONCLUIDA"
+    dataCriacao: "2026-06-10T14:22:00Z"

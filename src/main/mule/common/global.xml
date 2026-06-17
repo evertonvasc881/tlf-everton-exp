@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+    xmlns="http://www.mulesoft.org/schema/mule/core"
+    xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway"
+    xmlns:module-error-handler-plugin="http://www.mulesoft.org/schema/mule/module-error-handler-plugin"
+    xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+    xmlns:json-logger="http://www.mulesoft.org/schema/mule/json-logger"
+    xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+    xmlns:http="http://www.mulesoft.org/schema/mule/http"
+    xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+    xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+    xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd
+    http://www.mulesoft.org/schema/mule/api-gateway              http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd
+    http://www.mulesoft.org/schema/mule/ee/core                  http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+    http://www.mulesoft.org/schema/mule/mule-apikit              http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd
+    http://www.mulesoft.org/schema/mule/http                     http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+    http://www.mulesoft.org/schema/mule/tls                      http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+    http://www.mulesoft.org/schema/mule/core                     http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+    http://www.mulesoft.org/schema/mule/secure-properties        http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+    http://www.mulesoft.org/schema/mule/json-logger              http://www.mulesoft.org/schema/mule/json-logger/current/mule-json-logger.xsd
+    http://www.mulesoft.org/schema/mule/module-error-handler-plugin http://www.mulesoft.org/schema/mule/module-error-handler-plugin/current/mule-module-error-handler-plugin.xsd">
+
+    <!-- API Manager Autodiscovery (vincula esta app ao asset do API Manager) -->
+    <api-gateway:autodiscovery apiId="${API.Manager.id}" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="aee4ba5b-2529-4b7f-8f56-bcc0d5bf62b2" flowRef="tlf-everton-exp-main" />
+
+    <!-- Secure Properties: carrega secrets por ambiente (properties/${env}.yaml) -->
+    <secure-properties:config
+        name="Secure_Properties_Config" doc:name="Secure Properties Config"
+        doc:id="0f5173a8-08e9-404e-bd99-5c173444e290"
+        file="properties/${env}.yaml" key="${security.key}" />
+
+    <!-- TLS Context (Outbound): define truststore para chamadas HTTPS de saída -->
+    <tls:context name="TLS_Context" doc:name="TLS Context"
+        doc:id="8a927ea8-d2ec-4ef7-b96c-3356c8fd8255">
+        <tls:trust-store
+            path="keystores/${env}-Mule-truststore.jks"
+            password="${runtime.properties.truststore.mule.password}" type="jks" insecure="false" />
+    </tls:context>
+
+    <!-- Global HTTP Request Configuration -->
+    <http:request-config
+        name="Global_HTTP_Request_configuration"
+        doc:name="HTTP Request Configuration"
+        doc:id="63572a9d-9db1-48e1-acbf-cd056a2b5c1b"
+        responseTimeout="60000">
+        <http:request-connection
+            host="#[vars.dataSend.Host]" port="#[vars.dataSend.Port]"
+            protocol="HTTPS" connectionIdleTimeout="60000"
+            tlsContext="TLS_Context" />
+    </http:request-config>
+
+    <!-- JSON Logger Config -->
+    <json-logger:config name="JSON_Logger_Config"
+        doc:name="JSON Logger Config"
+        doc:id="f45cefb0-28f1-4e5d-93e6-02a2350cf944"
+        applicationName="#[app.name]" applicationVersion="#[app.version]"
+        environment="${env}" logLocationInfo="false"
+        contentFieldsDataMasking="client_id,client_secret,Authorization,content_base64" />
+
+    <!-- Error Handler Global -->
+    <error-handler name="error-handler-global-flow">
+        <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="d7a0d149-f840-411e-93df-566b0003b8c7">
+            <module-error-handler-plugin:process-error doc:name="Process Error" doc:id="62ab9682-72b1-40b4-a50e-52c8693288d4" />
+            <set-variable variableName="httpStatus" value="#[payload.code]" doc:name="Set HTTP Status Code" />
+            <json-logger:logger doc:name="JSON Error Log" doc:id="69e7e075-f8e0-43e5-bf10-8b4957e9f949" config-ref="JSON_Logger_Config" tracePoint="EXCEPTION" priority="ERROR" message="#['Error_' ++ vars.attributes.requestUri default &quot;error-handler-main-flow&quot;]">
+                <json-logger:content><![CDATA[#[import modules::JSONLoggerModule output application/json ---
+{
+    payload: JSONLoggerModule::stringifyNonJSON(payload)
+}]]]></json-logger:content>
+            </json-logger:logger>
+        </on-error-propagate>
+    </error-handler>
+
+</mule>
