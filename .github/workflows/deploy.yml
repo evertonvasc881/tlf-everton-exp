@@ -61,7 +61,7 @@ jobs:
             [
               {
                 "id": "anypoint-exchange-v3",
-                "url": "https://maven.anypoint.mulesoft.com/api/v3/maven",
+                "url": "https://maven.anypoint.mulesoft.com/api/v3/organizations/bda6429f-df0d-477d-80cb-e10089cffdee/maven",
                 "releases": { "enabled": "true" },
                 "snapshots": { "enabled": "false" }
               },
